@@ -146,7 +146,7 @@ int XTree::addElement(int pid, int lsid, std::string tagName)
 		_expand(topid);
 
 	// Check if we've got the element name
-	hash_map <std::string, int, HashString>::const_iterator
+	unordered_map<std::string, int, HashString>::const_iterator
 		hit = _tagNames.find(tagName);
 	if (hit != _tagNames.end())
 	{
@@ -237,7 +237,7 @@ void XTree::addHashValue(int eid, unsigned long long value)
 
 void XTree::addCDATA(int eid, size_t position)
 {
-	hash_map<int, vector<size_t> >::const_iterator
+	unordered_map<int, vector<size_t> >::const_iterator
 		hit = _cdataTable.find(eid);
 	if (hit != _cdataTable.end())
 	{
@@ -338,7 +338,7 @@ unsigned long long XTree::getHashValue(int eid)
 
 vector<size_t> XTree::getCDATA(int eid)
 {
-	hash_map<int, vector<size_t> >::const_iterator
+	unordered_map<int, vector<size_t> >::const_iterator
 		hit = _cdataTable.find(eid);
 	if (hit != _cdataTable.end())
 		return hit->second;
@@ -445,7 +445,7 @@ void XTree::dump()
 void XTree::dumpHash()
 {
 	std::cout << "hash table:" << _tagNames.size() << std::endl;
-	hash_map<std::string, int, HashString>::const_iterator
+	unordered_map<std::string, int, HashString>::const_iterator
 		hit;// = _tagNames.begin();
 	for(hit=_tagNames.begin(); hit != _tagNames.end(); hit++)
 	{

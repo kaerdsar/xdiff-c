@@ -40,10 +40,10 @@
 
 #include <iostream>
 #include <string>
-#include <ext/hash_map>
+#include <unordered_map>
 #include <vector>
 
-using namespace __gnu_cxx;
+using namespace std;
 
 class HashString
 {
@@ -188,8 +188,8 @@ private:
 	bool	**_isAttribute;
 	unsigned long long	**_hashValue;
 	std::string **_value;
-	hash_map<std::string, int, HashString>	_tagNames;
-	hash_map<int, vector<size_t> >	_cdataTable;
+	unordered_map<std::string, int, HashString>	_tagNames;
+	unordered_map<int, vector<size_t> >	_cdataTable;
 
 	void _initialize();
 	void _expand(int topid);
