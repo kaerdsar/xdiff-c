@@ -46,6 +46,7 @@
 #include <xercesc/sax2/XMLReaderFactory.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
 #include <xercesc/util/XMLString.hpp>
+#include <xercesc/framework/MemBufInputSource.hpp>
 
 #include "XTree.hpp"
 #include "XHash.hpp"
@@ -69,7 +70,7 @@ public:
 	  * @param	uri	input XML document
 	  * @return	the created XTree
 	  */
-	XTree* parse(const char* uri);
+    XTree* parse(const char* xml);
 
 	// Document handler methods
 

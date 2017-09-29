@@ -46,11 +46,11 @@ Required: Xerces C++ v1.4.0, g++ v2.9.*
 Running X-Diff
 --------------
 
-java XDiff [-o|-g] [-p percent] xml_file1 xml_file2 result_file
+java XDiff [-o|-g] [-p percent] xml_input1 xml_input2
 
 or,
 
-xdiff [-o|-g] [-p percent] xml_file1 xml_file2 result_file
+xdiff [-o|-g] [-p percent] xml_input1 xml_input2
 
 Options:
 

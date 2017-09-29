@@ -37,7 +37,7 @@
 
 #include "XDiff.hpp"
 
-const std::string	XDiff::USAGE = "xdiff [-o|-g] [-p percent] input_xml1 input_xml2 diff_result\nOptions:\n  The default mode is \"-o -p 0.3\"\n  -o\tThe optimal mode, to get the minimum editing distance.\n  -g\tThe greedy mode, to find a difference quickly.\n  -p\tThe maximum change percentage allowed.\n\tDefault value: 1.0 for -o mode; 0.3 for -g mode.";
+const std::string	XDiff::USAGE = "xdiff [-o|-g] [-p percent] input_xml1 input_xml2\nOptions:\n  The default mode is \"-o -p 0.3\"\n  -o\tThe optimal mode, to get the minimum editing distance.\n  -g\tThe greedy mode, to find a difference quickly.\n  -p\tThe maximum change percentage allowed.\n\tDefault value: 1.0 for -o mode; 0.3 for -g mode.";
 
 const int	XDiff::_CIRCUIT_SIZE = 2048;
 const int	XDiff::_MATRIX_SIZE = 1024;
@@ -51,7 +51,7 @@ double		XDiff::_NO_MATCH_THRESHOLD = 0.3;
 bool		XDiff::_oFlag = false;
 bool		XDiff::_gFlag = false;
 
-XDiff::XDiff(const char* input1, const char* input2, const char* output)
+XDiff::XDiff(const char* input1, const char* input2)
 {
 	struct timeval	*tv0 = new struct timeval;
 	struct timeval	*tv1 = new struct timeval;
@@ -125,7 +125,8 @@ XDiff::XDiff(const char* input1, const char* input2, const char* output)
 
 		// after diffing.
 		gettimeofday(tv3, tz);
-		writeDiff(input1, output);
+        std::string	out;
+        writeDiff(input1, out);
 		gettimeofday(tv4, tz);
 
 		std::cout << "Difference detected!" << std::endl;
@@ -135,7 +136,10 @@ XDiff::XDiff(const char* input1, const char* input2, const char* output)
 		std::cout << "Parsing " << input2 << ":\t"
 			<< _diffTime(tv1, tv2) << " s\n";
 		std::cout << "Diffing:\t\t" << _diffTime(tv2, tv3) << " s\n";
-		std::cout << "Writing diff:\t\t" << _diffTime(tv3, tv4) << " s\n";
+        std::cout << "Writing diff:\t\t" << _diffTime(tv3, tv4) << " s\n \n";
+
+        std::cout << "Differences:" << std::endl;
+        std::cout << out;
 
 		delete _xlut;
 		delete[] _attrList1;
@@ -1231,7 +1235,7 @@ int XDiff::_xdiff(int pid1, int pid2, int threshold)
 					{
 						if (!matched1[i])
 						{
-							dist =+ _xtree1->getDecendentsCount(elements1[i]);
+                            dist += _xtree1->getDecendentsCount(elements1[i]);
 							if (_gFlag && (dist >= threshold))
 							{
 								dist = XTree::NO_CONNECTION;
@@ -1930,25 +1934,18 @@ int XDiff::searchNCC(int nodeCount)
 	return 0;
 }
 
-void XDiff::writeDiff(const char* input, const char* output)
+void XDiff::writeDiff(const char* input, std::string &out)
 {
-	std::ifstream	in(input);
-	std::ofstream	out(output, std::ios::out|std::ios::trunc);
-
+    std::stringstream in(input);
 	int	root1 = _xtree1->getRoot();
 	int	root2 = _xtree2->getRoot();
-	// the header
-	// XXX <root > is valid and should be treated as <root>;
-	// < root> is NOT valid, so use <root as the comparison key.
 	std::string	rootTag = "<" + _xtree1->getTag(root1);
 	std::string	line;
-	while (getline(in, line))
-	{
-		if (line.find(rootTag) != std::string::npos)
-			break;
-		out << line << std::endl;
-	}
-	in.close();
+    while (std::getline(in, line)) {
+        if (line.find(rootTag) != std::string::npos)
+            break;
+        out += line + "\n";
+    }
 
 	int	matchType, matchNode;
 	_xtree1->getMatching(root1, matchType, matchNode);
@@ -1958,17 +1955,15 @@ void XDiff::writeDiff(const char* input, const char* output)
 		writeInsertNode(out, root2);
 	}
 	else
-		writeDiffNode(out, root1, root2);
-
-	out.close();
+        writeDiffNode(out, root1, root2);
 }
 
-void XDiff::writeDeleteNode(std::ofstream &out, int node)
+void XDiff::writeDeleteNode(std::string &out, int node)
 {
 	if (_xtree1->isElement(node))
 	{
 		std::string	tag = _xtree1->getTag(node);
-		out << "<" << tag;
+        out += "<" + tag;
 
 		// Attributes.
 		int	attr = _xtree1->getFirstAttribute(node);
@@ -1976,7 +1971,7 @@ void XDiff::writeDeleteNode(std::ofstream &out, int node)
 		{
 			std::string	atag = _xtree1->getTag(attr);
 			std::string	value = _xtree1->getAttributeValue(attr);
-			out << " " << atag << "=\"" << value << "\"";
+            out += " " + atag + "=\"" + value + "\"";
 			attr = _xtree1->getNextAttribute(attr);
 		}
 
@@ -1985,12 +1980,12 @@ void XDiff::writeDeleteNode(std::ofstream &out, int node)
 
 		if (child < 0)
 		{
-			out << "/><?DELETE " << tag << "?>" << std::endl;
+            out += "/><?DELETE " + tag + "?>" + "\n";
 			_needNewLine = false;
 			return;
 		}
 
-		out << "><?DELETE " << tag << "?>" << std::endl;
+        out += "><?DELETE " + tag + "?>" + "\n";
 		_needNewLine = false;
 
 		while (child > 0)
@@ -2001,26 +1996,26 @@ void XDiff::writeDeleteNode(std::ofstream &out, int node)
 
 		if (_needNewLine)
 		{
-			out << std::endl;
+            out += "\n";
 			_needNewLine = false;
 		}
 
-		out << "</" << tag << ">" << std::endl;
+        out += "</" + tag + ">" + "\n";
 	}
 	else
 	{
-		out << "<?DELETE \"" << constructText(_xtree1, node)
-			<< "\"?>" << std::endl;
+        out += "<?DELETE \"" + constructText(_xtree1, node)
+            + "\"?>" + "\n";
 		_needNewLine = false;
 	}
 }
 
-void XDiff::writeInsertNode(std::ofstream &out, int node)
+void XDiff::writeInsertNode(std::string &out, int node)
 {
 	if (_xtree2->isElement(node))
 	{
 		std::string	tag = _xtree2->getTag(node);
-		out << "<" << tag;
+        out += "<" + tag;
 
 		// Attributes.
 		int	attr = _xtree2->getFirstAttribute(node);
@@ -2028,7 +2023,7 @@ void XDiff::writeInsertNode(std::ofstream &out, int node)
 		{
 			std::string	atag = _xtree2->getTag(attr);
 			std::string	value = _xtree2->getAttributeValue(attr);
-			out << " " << atag << "=\"" << value << "\"";
+            out += " " + atag + "=\"" + value + "\"";
 			attr = _xtree2->getNextAttribute(attr);
 		}
 
@@ -2036,12 +2031,12 @@ void XDiff::writeInsertNode(std::ofstream &out, int node)
 		int	child = _xtree2->getFirstChild(node);
 		if (child < 0)
 		{
-			out << "/><?INSERT " << tag << "?>" << std::endl;
+            out += "/><?INSERT " + tag + "?>" + "\n";
 			_needNewLine = false;
 			return;
 		}
 
-		out << "><?INSERT " << tag << "?>" << std::endl;
+        out += "><?INSERT " + tag + "?>" + "\n";
 		_needNewLine = false;
 
 		while (child > 0)
@@ -2052,28 +2047,28 @@ void XDiff::writeInsertNode(std::ofstream &out, int node)
 
 		if (_needNewLine)
 		{
-			out << std::endl;
+            out += "\n";
 			_needNewLine = false;
 		}
 
-		out << "</" << tag << ">" << std::endl;
+        out += "</" + tag + ">" + "\n";
 	}
 	else
 	{
-		out << constructText(_xtree2, node) << "<?INSERT?>" << std::endl;
+        out += constructText(_xtree2, node) + "<?INSERT?>" + "\n";
 		_needNewLine = false;
 	}
 }
 
-void XDiff::writeMatchNode(std::ofstream &out, XTree *xtree, int node)
+void XDiff::writeMatchNode(std::string &out, XTree *xtree, int node)
 {
 	if (xtree->isElement(node))
 	{
 		std::string	tag = xtree->getTag(node);
 		if (_needNewLine)
-			out << std::endl;
+            out += "\n";
 
-		out << "<" << tag;
+        out += "<" + tag;
 
 		// Attributes.
 		int	attr = xtree->getFirstAttribute(node);
@@ -2081,7 +2076,7 @@ void XDiff::writeMatchNode(std::ofstream &out, XTree *xtree, int node)
 		{
 			std::string	atag = xtree->getTag(attr);
 			std::string	value = xtree->getAttributeValue(attr);
-			out << " " << atag << "=\"" << value << "\"";
+            out += " " + atag + "=\"" + value + "\"";
 			attr = xtree->getNextAttribute(attr);
 		}
 
@@ -2089,12 +2084,12 @@ void XDiff::writeMatchNode(std::ofstream &out, XTree *xtree, int node)
 		int	child = xtree->getFirstChild(node);
 		if (child < 0)
 		{
-			out << "/>" << std::endl;
+            out += "/>\n";
 			_needNewLine = false;
 			return;
 		}
 
-		out << ">";
+        out += ">";
 		_needNewLine = true;
 
 		while (child > 0)
@@ -2105,27 +2100,27 @@ void XDiff::writeMatchNode(std::ofstream &out, XTree *xtree, int node)
 
 		if (_needNewLine)
 		{
-			out << std::endl;
+            out += "\n";
 			_needNewLine = false;
 		}
 
-		out << "</" << tag << ">" << std::endl;
+        out += "</" + tag + ">" + "\n";
 	}
 	else
 	{
-		out << constructText(xtree, node);
+        out += constructText(xtree, node);
 		_needNewLine = false;
 	}
 }
 
-void XDiff::writeDiffNode(std::ofstream &out, int node1, int node2)
+void XDiff::writeDiffNode(std::string &out, int node1, int node2)
 {
 	if (_xtree1->isElement(node1))
 	{
 		std::string	tag = _xtree1->getTag(node1);
 		if (_needNewLine)
-			out << std::endl;
-		out << "<" << tag;
+            out += "\n";
+        out += "<" + tag;
 
 		// Attributes.
 		int	attr1 = _xtree1->getFirstAttribute(node1);
@@ -2137,16 +2132,16 @@ void XDiff::writeDiffNode(std::ofstream &out, int node1, int node2)
 			int	matchType, matchNode;
 			_xtree1->getMatching(attr1, matchType, matchNode);
 			if (matchType == XTree::MATCH)
-				out << " " << atag << "=\"" << value << "\"";
+                out += " " + atag + "=\"" + value + "\"";
 			else if (matchType == XTree::DELETE)
 			{
-				out << " " << atag << "=\"" << value << "\"";
+                out += " " + atag + "=\"" + value + "\"";
 				diffff += "<?DELETE " + atag + "?>";
 			}
 			else
 			{
 				std::string	value2 = _xtree2->getAttributeValue(matchNode);
-				out << " " << atag << "=\"" << value2 << "\"";
+                out += " " + atag + "=\"" + value2 + "\"";
 				diffff += "<?UPDATE " + atag +
 					  " FROM \"" + value + "\"?>";
 			}
@@ -2163,7 +2158,7 @@ void XDiff::writeDiffNode(std::ofstream &out, int node1, int node2)
 			{
 				std::string	atag = _xtree2->getTag(attr2);
 				std::string	value = _xtree2->getAttributeValue(attr2);
-				out << " " << atag << "=\"" << value << "\"";
+                out += " " + atag + "=\"" + value + "\"";
 				diffff += "<?INSERT " + atag + "?>";
 			}
 
@@ -2174,12 +2169,12 @@ void XDiff::writeDiffNode(std::ofstream &out, int node1, int node2)
 		int	child1 = _xtree1->getFirstChild(node1);
 		if (child1 < 0)
 		{
-			out << "/>" << diffff << std::endl;
+            out += "/>" + diffff + "\n";
 			_needNewLine = false;
 			return;
 		}
 
-		out << ">" << diffff;
+        out += ">" + diffff;
 		_needNewLine = true;
 
 		while (child1 > 0)
@@ -2209,16 +2204,16 @@ void XDiff::writeDiffNode(std::ofstream &out, int node1, int node2)
 
 		if (_needNewLine)
 		{
-			out << std::endl;
+            out += "\n";
 			_needNewLine = false;
 		}
 
-		out << "</" << tag << ">" << std::endl;
+        out += "</" + tag + ">" + "\n";
 	}
 	else
 	{
-		out << constructText(_xtree2, node2) << "<?UPDATE FROM \"" 
-			<< constructText(_xtree1, node1) << "\"?>";
+        out += constructText(_xtree2, node2) + "<?UPDATE FROM \""
+            + constructText(_xtree1, node1) + "\"?>";
 		_needNewLine = false;
 	}
 }
@@ -2268,52 +2263,52 @@ double XDiff::_diffTime(const struct timeval *time1,
 
 int main(int argc, char* args[])
 {
-	try
-	{
-		xercesc::XMLPlatformUtils::Initialize();
-	}
-	catch (const xercesc::XMLException& e)
-	{
-		std::cerr << "Error during initialization! :\n"
-			<< e.getMessage() << std::endl;
-		exit(1);
-	}
+    try
+    {
+        xercesc::XMLPlatformUtils::Initialize();
+    }
+    catch (const xercesc::XMLException& e)
+    {
+        std::cerr << "Error during initialization! :\n"
+            << e.getMessage() << std::endl;
+        exit(1);
+    }
 
-	int	opid = 1;
-	if (argc < 4)
-	{
-		std::cout << XDiff::USAGE << std::endl;
-		exit(1);
-	}
-	else if (strcmp(args[1], "-o") == 0)
-	{
-		XDiff::_oFlag = true;
-		opid++;
-	}
-	else if (strcmp(args[1], "-g") == 0)
-	{
-		XDiff::_gFlag = true;
-		opid++;
-	}
+    int	opid = 1;
+    if (argc < 3)
+    {
+        std::cout << XDiff::USAGE << std::endl;
+        exit(1);
+    }
+    else if (strcmp(args[1], "-o") == 0)
+    {
+        XDiff::_oFlag = true;
+        opid++;
+    }
+    else if (strcmp(args[1], "-g") == 0)
+    {
+        XDiff::_gFlag = true;
+        opid++;
+    }
 
-	if (strcmp(args[opid], "-p") == 0)
-	{
-		opid++;
-		double	p = strtod(args[opid], NULL);
-		if ((p <= 0) || (p > 1))
-		{
-			std::cout << XDiff::USAGE << std::endl;
-			exit(1);
-		}
-		XDiff::_NO_MATCH_THRESHOLD = p;
-		opid++;
-	}
+    if (strcmp(args[opid], "-p") == 0)
+    {
+        opid++;
+        double	p = strtod(args[opid], NULL);
+        if ((p <= 0) || (p > 1))
+        {
+            std::cout << XDiff::USAGE << std::endl;
+            exit(1);
+        }
+        XDiff::_NO_MATCH_THRESHOLD = p;
+        opid++;
+    }
 
-	if ((argc - opid) != 3)
-	{
-		std::cout << XDiff::USAGE << std::endl;
-		exit(1);
-	}
+    if ((argc - opid) != 2)
+    {
+        std::cout << XDiff::USAGE << std::endl;
+        exit(1);
+    }
 
-	XDiff	xdiff(args[opid], args[opid+1], args[opid+2]);
+    XDiff	xdiff(args[opid], args[opid+1]);
 }

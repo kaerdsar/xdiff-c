@@ -39,8 +39,6 @@
 
 const char*	XParser::_feature_Validation = "http://xml.org/sax/features/validation";
 const char*	XParser::_feature_NameSpaces = "http://xml.org/sax/features/namespaces";
-//const char*	XParser::_feature_SchemaSupport = "http://apache.org/xml/features/validation/schema";
-//const char*	XParser::_feature_SchemaFullSupport = "http://apache.org/xml/features/validation/schema-full-checking";
 const char*	XParser::_feature_NameSpacePrefixes = "http://xml.org/sax/features/namespace-prefixes";
 bool		XParser::_setValidation = false;
 bool		XParser::_setNameSpaces = true;
@@ -58,15 +56,7 @@ XParser::XParser()
 	delete validation;
 	XMLCh*	namespaces = xercesc::XMLString::transcode(_feature_NameSpaces);
 	_parser->setFeature((const XMLCh*)namespaces, _setNameSpaces);
-	delete namespaces;
-/*
-	XMLCh*	schemasupport = XMLString::transcode(_feature_SchemaSupport);
-	_parser->setFeature((const XMLCh*)schemasupport, _setSchemaSupport);
-	delete schemasupport;
-	XMLCh*	schemafullsupport = XMLString::transcode(_feature_SchemaFullSupport);
-	_parser->setFeature((const XMLCh*)schemafullsupport, _setSchemaFullSupport);
-	delete schemafullsupport;
-*/
+    delete namespaces;
 	XMLCh*	namespaceprefixes = xercesc::XMLString::transcode(_feature_NameSpacePrefixes);
 	_parser->setFeature((const XMLCh*)namespaceprefixes, _setNameSpacePrefixes);
 	delete namespaceprefixes;
@@ -92,19 +82,20 @@ XParser::~XParser()
 	delete _parser;
 }
 
-XTree* XParser::parse(const char* uri)
+XTree* XParser::parse(const char* xml)
 {
 	_idStack[_stackTop] = XTree::NULL_NODE;
 	_readElement = false;
 
 	try
-	{
-		_parser->parse(uri);
+    {
+        std::string src = xml;
+        xercesc::MemBufInputSource src_buffer((const XMLByte*)src.c_str(), src.length(), "dummy", false);
+        _parser->parse(src_buffer);
 	}
 	catch (const xercesc::XMLException& e)
 	{
-		std::cerr << "File not found:\t" << uri << "\nException message:\n"
-			<< e.getMessage() << std::endl;
+        std::cerr << "\nException message:\n" << e.getMessage() << std::endl;
 		return NULL;
 	}
 
@@ -133,7 +124,7 @@ void XParser::startElement(const XMLCh* const uri, const XMLCh* const local,
 
 	std::string local_s(xercesc::XMLString::transcode(local));
 
-//cout << "Add element " << _idStack[_stackTop] << "\t" << _lsidStack[_stackTop] << "\t" << local_s << endl;
+    //cout << "Add element " << _idStack[_stackTop] << "\t" << _lsidStack[_stackTop] << "\t" << local_s << endl;
 	int	eid = _xtree->addElement(_idStack[_stackTop],
 					 _lsidStack[_stackTop], local_s);
 	// Update last sibling info.
@@ -275,28 +266,3 @@ std::string XParser::_trim(std::string input)
 	int	end = input.find_last_not_of(_trimReject);
 	return input.substr(start, end - start + 1);
 }
-
-// For testing purpose.
-/*
-int main(int argc, char* args[])
-{
-	try
-	{
-		XMLPlatformUtils::Initialize();
-	}
-	catch (const XMLException& e)
-	{
-		cerr << "Error during initialization! :\n"
-			<< e.getMessage() << endl;
-		exit(1);
-	}
-
-	XParser	*parser = new XParser();
-	XTree	*xtree = parser->parse(args[1]);
-
-	xtree->dump();
-
-	delete parser;
-	delete xtree;
-}
-*/

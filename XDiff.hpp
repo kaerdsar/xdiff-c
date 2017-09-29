@@ -45,6 +45,7 @@
 #include <fstream>
 #include <math.h>
 #include <algorithm>
+#include <sstream>
 
 #include "XTree.hpp"
 #include "XParser.hpp"
@@ -60,11 +61,10 @@ public:
 	static bool		_oFlag, _gFlag;
         static double		_NO_MATCH_THRESHOLD;
 	/**
-	  * @param	input1	input file #1
-	  * @param	input2	input file #2
-	  * @param	output	output file
+      * @param	input1	input string #1
+      * @param	input2	input string #2
 	  */
-	XDiff(const char* input1, const char* input2, const char* output);
+    XDiff(const char* input1, const char* input2);
 	~XDiff();
 
 private:
@@ -108,11 +108,11 @@ private:
 	double _diffTime(const struct timeval *time1,
 			 const struct timeval *time2);
 
-	void writeDiff(const char* input, const char* output);
-	void writeDeleteNode(std::ofstream &out, int node);
-	void writeInsertNode(std::ofstream &out, int node);
-	void writeMatchNode(std::ofstream &out, XTree *xtree, int node);
-	void writeDiffNode(std::ofstream &out, int node1, int node2);
+    void writeDiff(const char* input, std::string &out);
+    void writeDeleteNode(std::string &out, int node);
+    void writeInsertNode(std::string &out, int node);
+    void writeMatchNode(std::string &out, XTree *xtree, int node);
+    void writeDiffNode(std::string &out, int node1, int node2);
 	std::string constructText(XTree *xtree, int eid);
 };
 #endif
